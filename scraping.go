@@ -145,7 +145,7 @@ func GetWebInfo(url string) (WebInfo *goquery.Document, err error) {
 }
 
 type bulletin struct {
-	url   string
-	title string
-	image string
+	Url   string
+	Title string
+	Image string
 }

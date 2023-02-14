@@ -85,10 +85,10 @@ func init() {
 
 func (b bulletin) SendUpdateInfo(discord *discordgo.Session, channelList []string) (errorList []error) {
 	embed := &discordgo.MessageEmbed{
-		Title: b.title,
-		URL:   b.url,
+		Title: b.Title,
+		URL:   b.Url,
 		Image: &discordgo.MessageEmbedImage{
-			URL: b.image,
+			URL: b.Image,
 		},
 		Color: 0x427eff,
 	}

@@ -32,8 +32,13 @@ func FullScreenshot(urlstr string, quality int, res *[]byte) chromedp.Tasks {
 }
 */
 
-func SaveImageFile(image []byte, name string) (err error) {
-	if err := os.WriteFile(name+".png", image, 0o644); err != nil {
+func SaveImageFile(image string, name string) (err error) {
+	imgBytes, err := base64.StdEncoding.DecodeString(image)
+	if err != nil {
+		fmt.Println("error decoding string,", err)
+		return err
+	}
+	if err := os.WriteFile(name+".png", imgBytes, 0o644); err != nil {
 		fmt.Println("error writing file,", err)
 		return err
 	}
