@@ -2,6 +2,7 @@ package seoultechbot
 
 import (
 	"fmt"
+	"net/http"
 	"strings"
 
 	"github.com/PuerkitoBio/goquery"
@@ -11,11 +12,11 @@ const AAI string = "https://aai.seoultech.ac.kr/information/bulletin/"
 const COSS string = "https://coss.seoultech.ac.kr/community/notice/"
 const SEOULTECH string = "https://www.seoultech.ac.kr/service/info/notice/"
 
-func Scrap(url string) (isUpdated bool, newUrlList []string, newTitleList []string, imageList [][]byte, err error) {
+func Scrap(url string) (isUpdated bool, bulletinList []bulletin, err error) {
 	html, err := GetWebInfo(url)
 	if err != nil {
 		fmt.Println("error scraping web,", err)
-		return false, nil, nil, nil, err
+		return false, nil, err
 	}
 	var titlelist [25]string
 	var urllist [25]string
@@ -23,22 +24,21 @@ func Scrap(url string) (isUpdated bool, newUrlList []string, newTitleList []stri
 		func(i int, s *goquery.Selection) {
 			titlelist[i], urllist[i] = strings.TrimSpace(s.Text()), s.AttrOr("href", "None")
 		})
-	isUpdated, newTitleList = TitleList.CheckWebUpdate(titlelist, url)
+	isUpdated, newTitleList := TitleList.CheckWebUpdate(titlelist, url)
 	if !isUpdated {
-		return false, nil, nil, nil, nil
+		return false, nil, nil
 	}
 	for _, title := range newTitleList {
 		found, index := FindIndex(titlelist, title)
 		if found {
 			image, err := GetNoticeContents(url, urllist[index])
 			if err != nil {
-				return true, nil, nil, nil, err
+				return true, nil, err
 			}
-			imageList = append(imageList, image)
-			newUrlList = append(newUrlList, urllist[index])
+			bulletinList = append(bulletinList, bulletin{url + urllist[index], title, ImageToUrl(image)})
 		}
 	}
-	return true, newUrlList, newTitleList, imageList, nil
+	return true, bulletinList, nil
 }
 
 func DecideTitleSelector(url string) string {
@@ -75,7 +75,7 @@ type formertitlelist struct {
 
 var TitleList formertitlelist
 
-func Init() {
+func init() {
 	TitleList = formertitlelist{}
 }
 
@@ -120,4 +120,32 @@ func GetNoticeContents(url string, contentsUrl string) (image []byte, err error)
 		return image, err
 	}
 	return image, nil
+}
+
+func FindIndex(arr [25]string, value interface{}) (found bool, index int) {
+	for i, v := range arr {
+		if v == value {
+			return true, i
+		}
+	}
+	return false, -1
+}
+
+func GetWebInfo(url string) (WebInfo *goquery.Document, err error) {
+	response, err := http.Get(url)
+	if err != nil {
+		return nil, err
+	}
+	defer response.Body.Close()
+	html, err := goquery.NewDocumentFromReader(response.Body)
+	if err != nil {
+		return nil, err
+	}
+	return html, nil
+}
+
+type bulletin struct {
+	url   string
+	title string
+	image string
 }

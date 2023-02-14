@@ -2,35 +2,12 @@ package seoultechbot
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
-	"net/http"
 	"os"
 
-	"github.com/PuerkitoBio/goquery"
 	"github.com/chromedp/chromedp"
 )
-
-func FindIndex(arr [25]string, value interface{}) (found bool, index int) {
-	for i, v := range arr {
-		if v == value {
-			return true, i
-		}
-	}
-	return false, -1
-}
-
-func GetWebInfo(url string) (WebInfo *goquery.Document, err error) {
-	response, err := http.Get(url)
-	if err != nil {
-		return nil, err
-	}
-	defer response.Body.Close()
-	html, err := goquery.NewDocumentFromReader(response.Body)
-	if err != nil {
-		return nil, err
-	}
-	return html, nil
-}
 
 /*
 func HtmlToImage(html *goquery.Selection) (image []byte, occuredError error) {
@@ -83,4 +60,9 @@ func FullScreenshot(urlstr string, quality int, res *[]byte) chromedp.Tasks {
 		chromedp.Navigate(urlstr),
 		chromedp.FullScreenshot(res, quality),
 	}
+}
+
+func ImageToUrl(img []byte) (imageUrl string) {
+	imgBase64 := base64.StdEncoding.EncodeToString(img)
+	return "data:image/png;base64," + imgBase64
 }
