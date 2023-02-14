@@ -1,8 +1,11 @@
 package seoultechbot
 
 import (
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/PuerkitoBio/goquery"
@@ -35,7 +38,7 @@ func Scrap(url string) (isUpdated bool, bulletinList []bulletin, err error) {
 			if err != nil {
 				return true, nil, err
 			}
-			bulletinList = append(bulletinList, bulletin{url + urllist[index], title, ImageToUrl(image)})
+			bulletinList = append(bulletinList, bulletin{url + urllist[index], title, image})
 		}
 	}
 	return true, bulletinList, nil
@@ -77,6 +80,7 @@ var TitleList formertitlelist
 
 func init() {
 	TitleList = formertitlelist{}
+	LoadFormerTitles()
 }
 
 func (t formertitlelist) CheckWebUpdate(currentTitles [25]string, url string) (isUpdated bool, updatedTitles []string) {
@@ -106,6 +110,9 @@ func (t formertitlelist) CheckWebUpdate(currentTitles [25]string, url string) (i
 		if !found {
 			newTitles = append(newTitles, currentTitle)
 		}
+	}
+	for i := range formerTitles {
+		formerTitles[i] = currentTitles[i]
 	}
 	if len(newTitles) == 0 {
 		return false, newTitles
@@ -147,5 +154,33 @@ func GetWebInfo(url string) (WebInfo *goquery.Document, err error) {
 type bulletin struct {
 	Url   string
 	Title string
-	Image string
+	Image []byte
+}
+
+func SaveFormerTitles(list formertitlelist) error {
+	file, err := json.Marshal(list)
+	if err != nil {
+		fmt.Println("error converting into json,", err)
+		return err
+	}
+	err = ioutil.WriteFile("./formerTitleList.json", file, os.FileMode(0644))
+	if err != nil {
+		fmt.Println("error writing file,", err)
+		return err
+	}
+	return nil
+}
+
+func LoadFormerTitles() error {
+	file, err := ioutil.ReadFile("./formerTitleList.json")
+	if err != nil {
+		fmt.Println("error reading file,", err)
+		return err
+	}
+	err = json.Unmarshal(file, &TitleList)
+	if err != nil {
+		fmt.Println("error converting into struct,", err)
+		return err
+	}
+	return nil
 }

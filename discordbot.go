@@ -1,9 +1,11 @@
 package seoultechbot
 
 import (
+	"bytes"
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"os/signal"
@@ -42,9 +44,11 @@ func Discordbot(token string) {
 		}
 		registeredCommands[i] = cmd
 	}
+	Cron(discord)
 	fmt.Println("Bot is now running.  Press CTRL-C to exit.")
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
+	SaveFormerTitles(TitleList)
 	<-sc
 	discord.Close()
 }
@@ -71,11 +75,16 @@ var (
 			Name:        "checkupdate",
 			Description: "현재 업데이트 여부를 확인하여 공지합니다.",
 		},
+		{
+			Name:        "savetitles",
+			Description: "제목을 저장합니다.",
+		},
 	}
 
 	commandHandlers = map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate){
 		"addchannel":  AddChannel,
-		"checkupdate": CheckUpdate,
+		"checkupdate": CheckUpdateNow,
+		"savetitles":  SaveTitles,
 	}
 )
 
@@ -84,20 +93,22 @@ func init() {
 }
 
 func (b bulletin) SendUpdateInfo(discord *discordgo.Session, channelList []string) (errorList []error) {
+	imageReader := io.Reader(bytes.NewReader(b.Image))
 	embed := &discordgo.MessageEmbed{
 		Title: b.Title,
 		URL:   b.Url,
-		Image: &discordgo.MessageEmbedImage{
-			URL: b.Image,
-		},
 		Color: 0x427eff,
+		Image: &discordgo.MessageEmbedImage{
+			URL: "attachment://image.png",
+		},
 	}
+
 	if channelList == nil {
 		return []error{errors.New("error: chnnel list is nil")}
 	}
 	c := make(chan error, len(channelList))
 	for _, channel := range channelList {
-		go SendEmbed(discord, embed, channel, c)
+		go SendEmbedImage(discord, embed, channel, imageReader, c)
 	}
 	for i := 0; i < len(channelList); i++ {
 		err := <-c
@@ -116,6 +127,27 @@ func SendEmbed(discord *discordgo.Session, embed *discordgo.MessageEmbed, discor
 	c <- nil
 }
 
+func SendEmbedImage(discord *discordgo.Session, embed *discordgo.MessageEmbed, discordChannel string, imageReader io.Reader, c chan error) {
+	_, err := discord.ChannelMessageSendComplex(
+		discordChannel,
+		&discordgo.MessageSend{
+			Content: "",
+			Files: []*discordgo.File{
+				{
+					Name:   "image.png",
+					Reader: imageReader,
+				},
+			},
+			Embed: embed,
+		},
+	)
+	if err != nil {
+		fmt.Println("error sending image:", err)
+		c <- err
+	}
+	c <- err
+}
+
 var ChannelList = []string{}
 
 func AddChannel(s *discordgo.Session, i *discordgo.InteractionCreate) {
@@ -128,6 +160,65 @@ func AddChannel(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	})
 }
 
-func CheckUpdate(s *discordgo.Session, i *discordgo.InteractionCreate) {
+func CheckUpdateNow(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	for _, url := range [3]string{AAI, COSS, SEOULTECH} {
+		isUpdated, bulletinList, err := Scrap(url)
+		if err != nil {
+			return
+		}
+		if !isUpdated {
+			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseChannelMessageWithSource,
+				Data: &discordgo.InteractionResponseData{
+					Content: "업데이트된 항목이 없습니다.",
+				},
+			})
+			return
+		}
+		for _, v := range bulletinList {
+			go func(v bulletin) {
+				err := v.SendUpdateInfo(s, ChannelList)
+				if len(err) != 0 {
+					fmt.Println(err)
+				}
+			}(v)
+		}
+		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: "업데이트되었습니다.",
+			},
+		})
+	}
+}
 
+func CheckUpdate(s *discordgo.Session, url string) error {
+	isUpdated, bulletinList, err := Scrap(url)
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
+	if !isUpdated {
+		return nil
+	}
+	for _, v := range bulletinList {
+		go func(v bulletin) {
+			err := v.SendUpdateInfo(s, ChannelList)
+			if len(err) != 0 {
+				fmt.Println(err)
+			}
+		}(v)
+	}
+	return nil
+}
+
+func SaveTitles(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	SaveFormerTitles(TitleList)
+	fmt.Println(TitleList)
+	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{
+			Content: "업데이트되었습니다.",
+		},
+	})
 }
