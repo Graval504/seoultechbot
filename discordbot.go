@@ -9,6 +9,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 
 	"github.com/bwmarrin/discordgo"
@@ -44,12 +45,13 @@ func Discordbot(token string) {
 		}
 		registeredCommands[i] = cmd
 	}
-	Cron(discord)
+	scheduler = Cron(discord)
+	scheduler.StartAsync()
 	fmt.Println("Bot is now running.  Press CTRL-C to exit.")
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
-	SaveFormerTitles(TitleList)
 	<-sc
+	TitleList.SaveFormerTitles()
 	discord.Close()
 }
 
@@ -161,35 +163,22 @@ func AddChannel(s *discordgo.Session, i *discordgo.InteractionCreate) {
 }
 
 func CheckUpdateNow(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	for _, url := range [3]string{AAI, COSS, SEOULTECH} {
-		isUpdated, bulletinList, err := Scrap(url)
-		if err != nil {
-			return
-		}
-		if !isUpdated {
-			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-				Type: discordgo.InteractionResponseChannelMessageWithSource,
-				Data: &discordgo.InteractionResponseData{
-					Content: "업데이트된 항목이 없습니다.",
-				},
-			})
-			return
-		}
-		for _, v := range bulletinList {
-			go func(v bulletin) {
-				err := v.SendUpdateInfo(s, ChannelList)
-				if len(err) != 0 {
-					fmt.Println(err)
-				}
-			}(v)
-		}
-		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Content: "업데이트되었습니다.",
-			},
-		})
+	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
+	})
+	var waitGroup sync.WaitGroup
+	waitGroup.Add(3)
+	for _, v := range [3]string{COSS, AAI, SEOULTECH} {
+		go func(v string) {
+			CheckUpdate(s, v)
+			waitGroup.Done()
+		}(v)
 	}
+	waitGroup.Wait()
+	message := "업데이트되었습니다."
+	s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+		Content: &message,
+	})
 }
 
 func CheckUpdate(s *discordgo.Session, url string) error {
@@ -213,8 +202,7 @@ func CheckUpdate(s *discordgo.Session, url string) error {
 }
 
 func SaveTitles(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	SaveFormerTitles(TitleList)
-	fmt.Println(TitleList)
+	TitleList.SaveFormerTitles()
 	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{

@@ -1,26 +1,26 @@
 package seoultechbot
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/go-co-op/gocron"
 )
 
-func Cron(discord *discordgo.Session) [3]*gocron.Job {
+var scheduler *gocron.Scheduler
+
+func Cron(discord *discordgo.Session) *gocron.Scheduler {
 	Scheduler := gocron.NewScheduler(time.Local)
-	job1, err := Scheduler.Every(1).Hour().Do(CheckUpdate, discord, AAI)
-	if err != nil {
-		fmt.Println(err)
-	}
-	job2, err := Scheduler.Every(1).Hour().Do(CheckUpdate, discord, COSS)
-	if err != nil {
-		fmt.Println(err)
-	}
-	job3, err := Scheduler.Every(1).Hour().Do(CheckUpdate, discord, SEOULTECH)
-	if err != nil {
-		fmt.Println(err)
-	}
-	return [3]*gocron.Job{job1, job2, job3}
+	Scheduler.SetMaxConcurrentJobs(3, gocron.WaitMode)
+	Scheduler.Cron("0 0/1 * * *").Do(CheckUpdate, discord, AAI)
+	Scheduler.Cron("0 0/1 * * *").Do(CheckUpdate, discord, COSS)
+	Scheduler.Cron("0 0/1 * * *").Do(CheckUpdate, discord, SEOULTECH)
+	return Scheduler
 }
+
+/*
+func CheckTime() {
+	loc, _ := time.LoadLocation("Asia/Seoul")
+	fmt.Println("Scheduler works at ", time.Now().In(loc))
+}
+*/

@@ -80,10 +80,10 @@ var TitleList formertitlelist
 
 func init() {
 	TitleList = formertitlelist{}
-	LoadFormerTitles()
+	TitleList.LoadFormerTitles()
 }
 
-func (t formertitlelist) CheckWebUpdate(currentTitles [25]string, url string) (isUpdated bool, updatedTitles []string) {
+func (t *formertitlelist) CheckWebUpdate(currentTitles [25]string, url string) (isUpdated bool, updatedTitles []string) {
 	var formerTitles *[25]string
 	var found bool
 	newTitles := []string{}
@@ -99,7 +99,7 @@ func (t formertitlelist) CheckWebUpdate(currentTitles [25]string, url string) (i
 	}
 	for _, currentTitle := range currentTitles {
 		found = false
-		for _, formerTitle := range formerTitles {
+		for _, formerTitle := range *formerTitles {
 			if strings.Compare(currentTitle, formerTitle) != 0 {
 				continue
 			} else {
@@ -112,7 +112,7 @@ func (t formertitlelist) CheckWebUpdate(currentTitles [25]string, url string) (i
 		}
 	}
 	for i := range formerTitles {
-		formerTitles[i] = currentTitles[i]
+		(*formerTitles)[i] = currentTitles[i]
 	}
 	if len(newTitles) == 0 {
 		return false, newTitles
@@ -157,7 +157,7 @@ type bulletin struct {
 	Image []byte
 }
 
-func SaveFormerTitles(list formertitlelist) error {
+func (list formertitlelist) SaveFormerTitles() error {
 	file, err := json.Marshal(list)
 	if err != nil {
 		fmt.Println("error converting into json,", err)
@@ -171,13 +171,13 @@ func SaveFormerTitles(list formertitlelist) error {
 	return nil
 }
 
-func LoadFormerTitles() error {
+func (list *formertitlelist) LoadFormerTitles() error {
 	file, err := ioutil.ReadFile("./formerTitleList.json")
 	if err != nil {
 		fmt.Println("error reading file,", err)
 		return err
 	}
-	err = json.Unmarshal(file, &TitleList)
+	err = json.Unmarshal(file, &list)
 	if err != nil {
 		fmt.Println("error converting into struct,", err)
 		return err
