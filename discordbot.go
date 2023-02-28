@@ -225,7 +225,7 @@ func SaveTitles(s *discordgo.Session, i *discordgo.InteractionCreate) {
 }
 
 func SaveChannels(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	if err := ioutil.WriteFile("channelList.txt", []byte(strings.Join(ChannelList, "\n")), 0644); err != nil {
+	if err := os.WriteFile("channelList.txt", []byte(strings.Join(ChannelList, "\n")), 0644); err != nil {
 		fmt.Println("error saving channelList,", err)
 	}
 	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
