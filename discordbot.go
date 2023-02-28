@@ -6,9 +6,11 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"os"
 	"os/signal"
+	"strings"
 	"sync"
 	"syscall"
 
@@ -52,6 +54,7 @@ func Discordbot(token string) {
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
 	<-sc
 	TitleList.SaveFormerTitles()
+	ioutil.WriteFile("channelList.txt", []byte(strings.Join(ChannelList, "\n")), 0644)
 	discord.Close()
 }
 
@@ -79,19 +82,29 @@ var (
 		},
 		{
 			Name:        "savetitles",
-			Description: "제목을 저장합니다.",
+			Description: "현재 게시글 목록을 서버에 저장합니다. *테스트용",
+		},
+		{
+			Name:        "savechannels",
+			Description: "알림을 받는 채널 목록을 서버에 저장합니다. *테스트용",
 		},
 	}
 
 	commandHandlers = map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate){
-		"addchannel":  AddChannel,
-		"checkupdate": CheckUpdateNow,
-		"savetitles":  SaveTitles,
+		"addchannel":   AddChannel,
+		"checkupdate":  CheckUpdateNow,
+		"savetitles":   SaveTitles,
+		"savechannels": SaveChannels,
 	}
 )
 
 func init() {
 	flag.Parse()
+	data, err := ioutil.ReadFile("channelList.txt")
+	if err != nil {
+		fmt.Println("Error reading file:", err)
+	}
+	ChannelList = strings.Split(string(data), "\n")
 }
 
 func (b bulletin) SendUpdateInfo(discord *discordgo.Session, channelList []string) (errorList []error) {
@@ -203,6 +216,18 @@ func CheckUpdate(s *discordgo.Session, url string) error {
 
 func SaveTitles(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	TitleList.SaveFormerTitles()
+	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{
+			Content: "업데이트되었습니다.",
+		},
+	})
+}
+
+func SaveChannels(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	if err := ioutil.WriteFile("channelList.txt", []byte(strings.Join(ChannelList, "\n")), 0644); err != nil {
+		fmt.Println("error saving channelList,", err)
+	}
 	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{
