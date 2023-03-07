@@ -1,15 +1,14 @@
 package seoultechbot
 
 import (
-	"bytes"
 	"errors"
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/signal"
+	"sort"
 	"strings"
 	"sync"
 	"syscall"
@@ -54,7 +53,7 @@ func Discordbot(token string) {
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
 	<-sc
 	TitleList.SaveFormerTitles()
-	ioutil.WriteFile("channelList.txt", []byte(strings.Join(ChannelList, "\n")), 0644)
+	os.WriteFile("channelList.txt", []byte(strings.Join(ChannelList, "\n")), 0644)
 	discord.Close()
 }
 
@@ -77,6 +76,10 @@ var (
 			Description: "현재 채널을 공지 채널로 추가합니다.",
 		},
 		{
+			Name:        "deletechannel",
+			Description: "현재 채널을 공지 채널에서 제외합니다.",
+		},
+		{
 			Name:        "checkupdate",
 			Description: "현재 업데이트 여부를 확인하여 공지합니다.",
 		},
@@ -91,16 +94,17 @@ var (
 	}
 
 	commandHandlers = map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate){
-		"addchannel":   AddChannel,
-		"checkupdate":  CheckUpdateNow,
-		"savetitles":   SaveTitles,
-		"savechannels": SaveChannels,
+		"addchannel":    AddChannel,
+		"deletechannel": DeleteChannel,
+		"checkupdate":   CheckUpdateNow,
+		"savetitles":    SaveTitles,
+		"savechannels":  SaveChannels,
 	}
 )
 
 func init() {
 	flag.Parse()
-	data, err := ioutil.ReadFile("channelList.txt")
+	data, err := os.ReadFile("channelList.txt")
 	if err != nil {
 		fmt.Println("Error reading file:", err)
 	}
@@ -108,7 +112,6 @@ func init() {
 }
 
 func (b bulletin) SendUpdateInfo(discord *discordgo.Session, channelList []string) (errorList []error) {
-	imageReader := io.Reader(bytes.NewReader(b.Image))
 	embed := &discordgo.MessageEmbed{
 		Title: b.Title,
 		URL:   b.Url,
@@ -123,7 +126,7 @@ func (b bulletin) SendUpdateInfo(discord *discordgo.Session, channelList []strin
 	}
 	c := make(chan error, len(channelList))
 	for _, channel := range channelList {
-		go SendEmbedImage(discord, embed, channel, imageReader, c)
+		go SendEmbedImage(discord, embed, channel, b.Image, c)
 	}
 	for i := 0; i < len(channelList); i++ {
 		err := <-c
@@ -170,7 +173,7 @@ func AddChannel(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{
-			Content: `<#` + i.ChannelID + `>` + "가 성공적으로 추가되었습니다.",
+			Content: `<#` + i.ChannelID + `>` + "채널이 성공적으로 추가되었습니다.",
 		},
 	})
 }
@@ -232,6 +235,26 @@ func SaveChannels(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{
 			Content: "업데이트되었습니다.",
+		},
+	})
+}
+
+func DeleteChannel(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	index := sort.SearchStrings(ChannelList, i.ChannelID)
+	if index == len(ChannelList) {
+		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: `<#` + i.ChannelID + `>` + "채널은 이미 알림을 받지 않는 상태입니다.",
+			},
+		})
+		return
+	}
+	ChannelList = append(ChannelList[:index], ChannelList[index+1:]...)
+	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{
+			Content: `<#` + i.ChannelID + `>` + "채널이 성공적으로 제거되었습니다.",
 		},
 	})
 }

@@ -1,9 +1,10 @@
 package seoultechbot
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"os"
 	"strings"
@@ -38,7 +39,7 @@ func Scrap(url string) (isUpdated bool, bulletinList []bulletin, err error) {
 			if err != nil {
 				return true, nil, err
 			}
-			bulletinList = append(bulletinList, bulletin{url + urllist[index], title, image})
+			bulletinList = append(bulletinList, bulletin{url + urllist[index], title, io.Reader(bytes.NewReader(image))})
 		}
 	}
 	return true, bulletinList, nil
@@ -154,7 +155,7 @@ func GetWebInfo(url string) (WebInfo *goquery.Document, err error) {
 type bulletin struct {
 	Url   string
 	Title string
-	Image []byte
+	Image io.Reader
 }
 
 func (list formertitlelist) SaveFormerTitles() error {
@@ -163,7 +164,7 @@ func (list formertitlelist) SaveFormerTitles() error {
 		fmt.Println("error converting into json,", err)
 		return err
 	}
-	err = ioutil.WriteFile("./formerTitleList.json", file, os.FileMode(0644))
+	err = os.WriteFile("./formerTitleList.json", file, os.FileMode(0644))
 	if err != nil {
 		fmt.Println("error writing file,", err)
 		return err
@@ -172,7 +173,7 @@ func (list formertitlelist) SaveFormerTitles() error {
 }
 
 func (list *formertitlelist) LoadFormerTitles() error {
-	file, err := ioutil.ReadFile("./formerTitleList.json")
+	file, err := os.ReadFile("./formerTitleList.json")
 	if err != nil {
 		fmt.Println("error reading file,", err)
 		return err

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/chromedp/chromedp"
@@ -32,14 +33,16 @@ func FullScreenshot(urlstr string, quality int, res *[]byte) chromedp.Tasks {
 }
 */
 
-func SaveImageFile(image string, name string) (err error) {
-	imgBytes, err := base64.StdEncoding.DecodeString(image)
+func SaveImageFile(image io.Reader, name string) (err error) {
+	file, err := os.Create(name + ".png")
 	if err != nil {
-		fmt.Println("error decoding string,", err)
+		fmt.Println("error creating file,", err)
 		return err
 	}
-	if err := os.WriteFile(name+".png", imgBytes, 0o644); err != nil {
-		fmt.Println("error writing file,", err)
+	defer file.Close()
+	_, err = io.Copy(file, image)
+	if err != nil {
+		fmt.Println("error saving image,", err)
 		return err
 	}
 	fmt.Println("wrote " + name + ".png")
