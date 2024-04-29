@@ -2,6 +2,7 @@ package seoultechbot
 
 import (
 	"bytes"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -140,6 +141,7 @@ func FindIndex(arr [25]string, value interface{}) (found bool, index int) {
 }
 
 func GetWebInfo(url string) (WebInfo *goquery.Document, err error) {
+	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 	response, err := http.Get(url)
 	if err != nil {
 		return nil, err
