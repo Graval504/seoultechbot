@@ -46,14 +46,12 @@ func Discordbot(token string) {
 		}
 		registeredCommands[i] = cmd
 	}
-	scheduler = Cron(discord)
+	scheduler = Cron(discord, &TitleList)
 	scheduler.StartAsync()
 	fmt.Println("Bot is now running.  Press CTRL-C to exit.")
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
 	<-sc
-	TitleList.SaveFormerTitles()
-	os.WriteFile("channelList.txt", []byte(strings.Join(ChannelList, "\n")), 0644)
 	discord.Close()
 }
 
@@ -176,6 +174,7 @@ func AddChannel(s *discordgo.Session, i *discordgo.InteractionCreate) {
 			Content: `<#` + i.ChannelID + `>` + "채널이 성공적으로 추가되었습니다.",
 		},
 	})
+	os.WriteFile("channelList.txt", []byte(strings.Join(ChannelList, "\n")), 0644)
 }
 
 func CheckUpdateNow(s *discordgo.Session, i *discordgo.InteractionCreate) {
@@ -257,4 +256,5 @@ func DeleteChannel(s *discordgo.Session, i *discordgo.InteractionCreate) {
 			Content: `<#` + i.ChannelID + `>` + "채널이 성공적으로 제거되었습니다.",
 		},
 	})
+	os.WriteFile("channelList.txt", []byte(strings.Join(ChannelList, "\n")), 0644)
 }
