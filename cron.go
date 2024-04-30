@@ -9,13 +9,12 @@ import (
 
 var scheduler *gocron.Scheduler
 
-func Cron(discord *discordgo.Session, TitleList *formertitlelist) *gocron.Scheduler {
+func Cron(discord *discordgo.Session, Titles *formertitlelist) *gocron.Scheduler {
 	Scheduler := gocron.NewScheduler(time.Local)
 	Scheduler.SetMaxConcurrentJobs(3, gocron.WaitMode)
 	Scheduler.Cron("0 0/1 * * *").Do(CheckUpdate, discord, AAI)
 	Scheduler.Cron("0 0/1 * * *").Do(CheckUpdate, discord, COSS)
 	Scheduler.Cron("0 0/1 * * *").Do(CheckUpdate, discord, SEOULTECH)
-	Scheduler.Cron("0 0/1 * * *").Do(TitleList.SaveFormerTitles)
 	return Scheduler
 }
 

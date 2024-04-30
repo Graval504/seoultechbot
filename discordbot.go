@@ -231,6 +231,7 @@ func CheckUpdate(s *discordgo.Session, url string) error {
 			}
 		}(v)
 	}
+	TitleList.SaveFormerTitles()
 	return nil
 }
 
