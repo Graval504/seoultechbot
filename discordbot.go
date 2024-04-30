@@ -99,10 +99,10 @@ var (
 	commandHandlers = map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate){
 		"addchannel":    AddChannel,
 		"deletechannel": DeleteChannel,
+		"checkchannel":  CheckChannel,
 		"checkupdate":   CheckUpdateNow,
 		"savetitles":    SaveTitles,
 		"savechannels":  SaveChannels,
-		"checkchannel":  CheckChannel,
 	}
 )
 
@@ -175,6 +175,16 @@ func SendEmbedImage(discord *discordgo.Session, embed *discordgo.MessageEmbed, d
 var ChannelList = []string{}
 
 func AddChannel(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	index := slices.IndexFunc(ChannelList, func(s string) bool { return s == i.ChannelID })
+	if index != -1 {
+		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: `<#` + i.ChannelID + `>` + "채널은 이미 알림을 받고 있는 상태입니다.",
+			},
+		})
+		return
+	}
 	ChannelList = append(ChannelList, i.ChannelID)
 	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
@@ -248,7 +258,7 @@ func SaveChannels(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
 func DeleteChannel(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	index := slices.IndexFunc(ChannelList, func(s string) bool { return s == i.ChannelID })
-	if index == len(ChannelList) {
+	if index == -1 {
 		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
@@ -269,7 +279,7 @@ func DeleteChannel(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
 func CheckChannel(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	index := slices.IndexFunc(ChannelList, func(s string) bool { return s == i.ChannelID })
-	if index == len(ChannelList) {
+	if index != -1 {
 		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
