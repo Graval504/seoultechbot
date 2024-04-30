@@ -16,7 +16,7 @@
 5. 명령어가 제대로 작동하지 않거나, 오작동을 일으키는 경우에는 Issue를 제기해주세요.
 
 ## 봇 운영하기
-- go를 처음 사용하신다면, 코드를 작성 및 실행하는 디렉토리에 `go mod init`을 통해 초기화를 해주세요.
+- go를 처음 사용하신다면, 코드를 작성 및 실행하는 디렉토리에서 `go mod init` 명령어를 통해 초기화를 해주세요.
 1. `go get github.com/Graval504/seoultechbot` 명령어를 통해 패키지를 설치해주세요.
 2. 코드에서 `"github.com/Graval504/seoultechbot"`를 import 해주세요.
 3. `seoultechbot.Discordbot(Token)`함수를 통해 봇을 실행할 수 있습니다.
