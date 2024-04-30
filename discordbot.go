@@ -1,6 +1,7 @@
 package seoultechbot
 
 import (
+	"bytes"
 	"errors"
 	"flag"
 	"fmt"
@@ -123,6 +124,7 @@ func (b bulletin) SendUpdateInfo(discord *discordgo.Session, channelList []strin
 		return []error{errors.New("error: chnnel list is nil")}
 	}
 	c := make(chan error, len(channelList))
+
 	for _, channel := range channelList {
 		go SendEmbedImage(discord, embed, channel, b.Image, c)
 	}
@@ -143,7 +145,8 @@ func SendEmbed(discord *discordgo.Session, embed *discordgo.MessageEmbed, discor
 	c <- nil
 }
 
-func SendEmbedImage(discord *discordgo.Session, embed *discordgo.MessageEmbed, discordChannel string, imageReader io.Reader, c chan error) {
+func SendEmbedImage(discord *discordgo.Session, embed *discordgo.MessageEmbed, discordChannel string, image []byte, c chan error) {
+	imageReader := io.Reader(bytes.NewReader(image))
 	_, err := discord.ChannelMessageSendComplex(
 		discordChannel,
 		&discordgo.MessageSend{

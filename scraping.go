@@ -1,11 +1,9 @@
 package seoultechbot
 
 import (
-	"bytes"
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"os"
 	"strings"
@@ -40,7 +38,7 @@ func Scrap(url string) (isUpdated bool, bulletinList []bulletin, err error) {
 			if err != nil {
 				return true, nil, err
 			}
-			bulletinList = append(bulletinList, bulletin{url + urllist[index], title, io.Reader(bytes.NewReader(image))})
+			bulletinList = append(bulletinList, bulletin{url + urllist[index], title, image})
 		}
 	}
 	return true, bulletinList, nil
@@ -157,7 +155,7 @@ func GetWebInfo(url string) (WebInfo *goquery.Document, err error) {
 type bulletin struct {
 	Url   string
 	Title string
-	Image io.Reader
+	Image []byte
 }
 
 func (list formertitlelist) SaveFormerTitles() error {
