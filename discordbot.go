@@ -9,7 +9,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
-	"sort"
+	"slices"
 	"strings"
 	"sync"
 	"syscall"
@@ -79,6 +79,10 @@ var (
 			Description: "현재 채널을 공지 채널에서 제외합니다.",
 		},
 		{
+			Name:        "checkchannel",
+			Description: "현재 채널의 공지 알림 여부를 확인합니다.",
+		},
+		{
 			Name:        "checkupdate",
 			Description: "현재 업데이트 여부를 확인하여 공지합니다.",
 		},
@@ -98,6 +102,7 @@ var (
 		"checkupdate":   CheckUpdateNow,
 		"savetitles":    SaveTitles,
 		"savechannels":  SaveChannels,
+		"checkchannel":  CheckChannel,
 	}
 )
 
@@ -242,7 +247,7 @@ func SaveChannels(s *discordgo.Session, i *discordgo.InteractionCreate) {
 }
 
 func DeleteChannel(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	index := sort.SearchStrings(ChannelList, i.ChannelID)
+	index := slices.IndexFunc(ChannelList, func(s string) bool { return s == i.ChannelID })
 	if index == len(ChannelList) {
 		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
@@ -260,4 +265,23 @@ func DeleteChannel(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		},
 	})
 	os.WriteFile("channelList.txt", []byte(strings.Join(ChannelList, "\n")), 0644)
+}
+
+func CheckChannel(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	index := slices.IndexFunc(ChannelList, func(s string) bool { return s == i.ChannelID })
+	if index == len(ChannelList) {
+		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: `<#` + i.ChannelID + `>` + "채널은 알림을 받고 있는 상태입니다.",
+			},
+		})
+		return
+	}
+	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{
+			Content: `<#` + i.ChannelID + `>` + "채널은 알림을 받지 않는 상태입니다.",
+		},
+	})
 }
