@@ -21,6 +21,6 @@ func Cron(discord *discordgo.Session, Titles *formertitlelist) *gocron.Scheduler
 /*
 func CheckTime() {
 	loc, _ := time.LoadLocation("Asia/Seoul")
-	fmt.Println("Scheduler works at ", time.Now().In(loc))
+	log.Println("Scheduler works at ", time.Now().In(loc))
 }
 */

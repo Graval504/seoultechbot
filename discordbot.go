@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"errors"
 	"flag"
-	"fmt"
 	"io"
 	"log"
 	"os"
@@ -22,7 +21,7 @@ func Discordbot(token string) {
 	//GetDiscordToken => Personal function that returns my disocrd bot Token. It doesn't exist on github.
 	//So you should change this to your own bot Token
 	if err != nil {
-		fmt.Println("error creating Discord session,", err)
+		log.Println("error creating Discord session,", err)
 		return
 	}
 	discord.AddHandler(messageCreate)
@@ -36,7 +35,7 @@ func Discordbot(token string) {
 	})
 	err = discord.Open()
 	if err != nil {
-		fmt.Println("error opening connection,", err)
+		log.Println("error opening connection,", err)
 		return
 	}
 	registeredCommands := make([]*discordgo.ApplicationCommand, len(commands))
@@ -49,7 +48,7 @@ func Discordbot(token string) {
 	}
 	scheduler = Cron(discord, &TitleList)
 	scheduler.StartAsync()
-	fmt.Println("Bot is now running.  Press CTRL-C to exit.")
+	log.Println("Bot is now running.  Press CTRL-C to exit.")
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
 	<-sc
@@ -110,7 +109,7 @@ func init() {
 	flag.Parse()
 	data, err := os.ReadFile("channelList.txt")
 	if err != nil {
-		fmt.Println("Error reading file:", err)
+		log.Println("Error reading file:", err)
 	}
 	ChannelList = strings.Split(string(data), "\n")
 }
@@ -166,7 +165,7 @@ func SendEmbedImage(discord *discordgo.Session, embed *discordgo.MessageEmbed, d
 		},
 	)
 	if err != nil {
-		fmt.Println("error sending image:", err)
+		log.Println("error sending image:", err)
 		c <- err
 	}
 	c <- err
@@ -217,7 +216,7 @@ func CheckUpdateNow(s *discordgo.Session, i *discordgo.InteractionCreate) {
 func CheckUpdate(s *discordgo.Session, url string) error {
 	isUpdated, bulletinList, err := Scrap(url)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		return err
 	}
 	if !isUpdated {
@@ -227,7 +226,7 @@ func CheckUpdate(s *discordgo.Session, url string) error {
 		go func(v bulletin) {
 			err := v.SendUpdateInfo(s, ChannelList)
 			if len(err) != 0 {
-				fmt.Println(err)
+				log.Println(err)
 			}
 		}(v)
 	}
@@ -247,7 +246,7 @@ func SaveTitles(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
 func SaveChannels(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	if err := os.WriteFile("channelList.txt", []byte(strings.Join(ChannelList, "\n")), 0644); err != nil {
-		fmt.Println("error saving channelList,", err)
+		log.Println("error saving channelList,", err)
 	}
 	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
