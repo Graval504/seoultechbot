@@ -3,7 +3,7 @@ package seoultechbot
 import (
 	"crypto/tls"
 	"encoding/json"
-	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -14,15 +14,16 @@ import (
 const AAI string = "https://aai.seoultech.ac.kr/information/bulletin/"
 const COSS string = "https://coss.seoultech.ac.kr/community/notice/"
 const SEOULTECH string = "https://www.seoultech.ac.kr/service/info/notice/"
+const LISTSIZE int = 50
 
 func Scrap(url string) (isUpdated bool, bulletinList []bulletin, err error) {
 	html, err := GetWebInfo(url)
 	if err != nil {
-		fmt.Println("error scraping web,", err)
+		log.Println("error scraping web,", err)
 		return false, nil, err
 	}
-	var titlelist [25]string
-	var urllist [25]string
+	var titlelist [LISTSIZE]string
+	var urllist [LISTSIZE]string
 	html.Find(DecideTitleSelector(url)).Each(
 		func(i int, s *goquery.Selection) {
 			titlelist[i], urllist[i] = strings.TrimSpace(s.Text()), s.AttrOr("href", "None")
@@ -71,9 +72,9 @@ func DecideContentsSelector(url string) string {
 }
 
 type formertitlelist struct {
-	COSSTitleList      [25]string
-	AAITitleList       [25]string
-	SeoulTechTitleList [25]string
+	COSSTitleList      [LISTSIZE]string
+	AAITitleList       [LISTSIZE]string
+	SeoulTechTitleList [LISTSIZE]string
 }
 
 var TitleList formertitlelist
@@ -83,8 +84,8 @@ func init() {
 	TitleList.LoadFormerTitles()
 }
 
-func (t *formertitlelist) CheckWebUpdate(currentTitles [25]string, url string) (isUpdated bool, updatedTitles []string) {
-	var formerTitles *[25]string
+func (t *formertitlelist) CheckWebUpdate(currentTitles [LISTSIZE]string, url string) (isUpdated bool, updatedTitles []string) {
+	var formerTitles *[LISTSIZE]string
 	var found bool
 	newTitles := []string{}
 	switch url {
@@ -123,13 +124,13 @@ func (t *formertitlelist) CheckWebUpdate(currentTitles [25]string, url string) (
 func GetNoticeContents(url string, contentsUrl string) (image []byte, err error) {
 	image, err = ContentsToImage(url+contentsUrl, DecideContentsSelector(url))
 	if err != nil {
-		fmt.Println("error converting html into image,", err)
+		log.Println("error converting html into image,", err)
 		return image, err
 	}
 	return image, nil
 }
 
-func FindIndex(arr [25]string, value interface{}) (found bool, index int) {
+func FindIndex(arr [LISTSIZE]string, value interface{}) (found bool, index int) {
 	for i, v := range arr {
 		if v == value {
 			return true, i
@@ -161,12 +162,12 @@ type bulletin struct {
 func (list formertitlelist) SaveFormerTitles() error {
 	file, err := json.Marshal(list)
 	if err != nil {
-		fmt.Println("error converting into json,", err)
+		log.Println("error converting into json,", err)
 		return err
 	}
 	err = os.WriteFile("./formerTitleList.json", file, os.FileMode(0644))
 	if err != nil {
-		fmt.Println("error writing file,", err)
+		log.Println("error writing file,", err)
 		return err
 	}
 	return nil
@@ -175,12 +176,12 @@ func (list formertitlelist) SaveFormerTitles() error {
 func (list *formertitlelist) LoadFormerTitles() error {
 	file, err := os.ReadFile("./formerTitleList.json")
 	if err != nil {
-		fmt.Println("error reading file,", err)
+		log.Println("error reading file,", err)
 		return err
 	}
 	err = json.Unmarshal(file, &list)
 	if err != nil {
-		fmt.Println("error converting into struct,", err)
+		log.Println("error converting into struct,", err)
 		return err
 	}
 	return nil
